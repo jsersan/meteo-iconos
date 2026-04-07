@@ -174,4 +174,3 @@ Puedes buscar el código de cualquier municipio en:
 ## Licencia
 
 MIT — datos meteorológicos © AEMET, datos cartográficos © IGN España (CC-BY 4.0)
-# meteo-iconos
