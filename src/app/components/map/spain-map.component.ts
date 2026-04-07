@@ -7,9 +7,9 @@ import * as topojson from 'topojson-client';
 import type { Topology, GeometryCollection } from 'topojson-specification';
 import { AppStateService } from '../../services/app-state.service';
 import { ComunidadAutonoma } from '../../models/weather.models';
-
+ 
 declare const d3CompositeProjections: any;
-
+ 
 const PROV_TO_CCAA: Record<string, string> = {
   '04':'Andalucía','11':'Andalucía','14':'Andalucía','18':'Andalucía',
   '21':'Andalucía','23':'Andalucía','29':'Andalucía','41':'Andalucía',
@@ -30,7 +30,7 @@ const PROV_TO_CCAA: Record<string, string> = {
   '03':'Comunitat Valenciana','12':'Comunitat Valenciana','46':'Comunitat Valenciana',
   '51':'Ceuta','52':'Melilla',
 };
-
+ 
 const PROV_CAPITAL: Record<string, string> = {
   '04':'04013','11':'11012','14':'14021','18':'18087',
   '21':'21041','23':'23050','29':'29067','41':'41091',
@@ -46,7 +46,7 @@ const PROV_CAPITAL: Record<string, string> = {
   '01':'01059','20':'20069','48':'48020','26':'26089',
   '03':'03014','12':'12040','46':'46250','51':'51001','52':'52001',
 };
-
+ 
 const PROV_NAME: Record<string, string> = {
   '04':'Almería','11':'Cádiz','14':'Córdoba','18':'Granada',
   '21':'Huelva','23':'Jaén','29':'Málaga','41':'Sevilla',
@@ -62,7 +62,7 @@ const PROV_NAME: Record<string, string> = {
   '01':'Álava','20':'Gipuzkoa','48':'Bizkaia','26':'La Rioja',
   '03':'Alicante','12':'Castellón','46':'Valencia','51':'Ceuta','52':'Melilla',
 };
-
+ 
 // Maps province INE 2-digit code → capital municipio INE id (same as PROV_CAPITAL in the service)
 const PROV_CODE_TO_CAPITAL: Record<string,string> = {
   '04':'04013','11':'11012','14':'14021','18':'18087','21':'21041','23':'23050','29':'29067','41':'41091',
@@ -74,13 +74,13 @@ const PROV_CODE_TO_CAPITAL: Record<string,string> = {
   '01':'01059','20':'20069','48':'48020','26':'26089','03':'03014','12':'12040','46':'46250',
   '51':'51001','52':'52001',
 };
-
+ 
 const WEATHER_EMOJI: Record<string,string> = {
   sol:'☀️', sol_nubes:'⛅', nubes:'☁️', lluvia:'🌧️',
   lluvia_sol:'🌦️', tormenta:'⛈️', nieve:'❄️', niebla:'🌫️',
   viento:'💨', granizo:'🌨️',
 };
-
+ 
 @Component({
   selector: 'app-spain-map',
   standalone: true,
@@ -144,30 +144,30 @@ const WEATHER_EMOJI: Record<string,string> = {
 export class SpainMapComponent implements OnInit, OnDestroy {
   @ViewChild('svgRef',     { static: true }) svgRef!:     ElementRef<SVGSVGElement>;
   @ViewChild('wrapperRef', { static: true }) wrapperRef!: ElementRef<HTMLDivElement>;
-
+ 
   private state = inject(AppStateService);
   private zone  = inject(NgZone);
-
+ 
   isLoading = true;
   isZoomed  = false;
   tooltip   = { visible: false, x: 0, y: 0, name: '' };
-
+ 
   // SVG canvas dimensions
   private W = 0; private H = 0;
   private baseFontSize = 7;
   private svg!: d3.Selection<SVGSVGElement, unknown, null, undefined>;
   private proj!: any;
   private pathFn!: d3.GeoPath;
-
+ 
   private topoCC:   Topology | null = null;
   private topoProv: Topology | null = null;
-
+ 
   private featureData: Array<{ ccaaName: string; bounds: [[number,number],[number,number]] }> = [];
   private provBounds  = new Map<string, [[number,number],[number,number]]>();
-
+ 
   private resizeObserver?: ResizeObserver;
   private resizeTimer?: ReturnType<typeof setTimeout>;
-
+ 
   constructor() {
     // React to province weather data arriving — must be in constructor for injection context
     effect(() => {
@@ -177,7 +177,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       }
     });
   }
-
+ 
   async ngOnInit() {
     await this.loadLib();
     [this.topoCC, this.topoProv] = await Promise.all([
@@ -188,7 +188,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     this.setupInteraction();
     this.setupResize();
   }
-
+ 
   ngOnDestroy() {
     this.resizeObserver?.disconnect();
     clearTimeout(this.resizeTimer);
@@ -200,7 +200,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     if (el.__mousemove) window.removeEventListener('mousemove', el.__mousemove);
     if (el.__mouseup)   window.removeEventListener('mouseup',   el.__mouseup);
   }
-
+ 
   zoomOut(): void {
     this.isZoomed = false;
     const todas = this.state.comunidades().find(c => c.id === '00');
@@ -212,7 +212,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       this.redrawFills();
     });
   }
-
+ 
   // ─── Load lib ──────────────────────────────────────────────────────────────
   private loadLib(): Promise<void> {
     return new Promise(resolve => {
@@ -223,16 +223,16 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       document.head.appendChild(s);
     });
   }
-
+ 
   private async fetchTopo(url: string): Promise<Topology | null> {
     try { return await d3.json<Topology>(url) ?? null; } catch { return null; }
   }
-
+ 
   // ─── Build the full map ────────────────────────────────────────────────────
   private buildMap(): void {
     this.isLoading = true;
     if (!this.topoCC) { this.isLoading = false; return; }
-
+ 
     const wrapper = this.wrapperRef.nativeElement;
     this.W = Math.max(wrapper.clientWidth || 800, 400);
     const containerH = wrapper.clientHeight;
@@ -240,37 +240,37 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     // We'll crop the height after measuring actual content bounds
     this.H = containerH > 150 ? containerH : Math.round(this.W * 0.60);
     this.baseFontSize = Math.max(6, Math.round(this.W / 120));
-
+ 
     const svgEl = this.svgRef.nativeElement;
     this.svg = d3.select(svgEl);
     this.svg.selectAll('*').remove();
     this.featureData = [];
     this.provBounds.clear();
-
+ 
     // ── Projection ────────────────────────────────────────────────────────
     const useComposite = typeof d3CompositeProjections !== 'undefined' &&
       typeof d3CompositeProjections.geoConicConformalSpain === 'function';
     this.proj = useComposite
       ? d3CompositeProjections.geoConicConformalSpain()
       : d3.geoConicConformal().center([-3.7,40.2]).parallels([36,44]);
-
+ 
     const ccaaGeo = topojson.feature(
       this.topoCC!, (this.topoCC as any).objects.autonomous_regions as GeometryCollection
     );
-
+ 
     // Step 1: fit to full canvas
     this.proj.fitSize([this.W, this.H], ccaaGeo);
     let path0 = d3.geoPath(this.proj);
     const [[ax0,ay0],[ax1,ay1]] = path0.bounds(ccaaGeo as any);
     const aw = ax1-ax0; const ah = ay1-ay0;
-
+ 
     // Step 2: rescale to fit with horizontal padding only (4% each side)
     // Use more generous horizontal padding so map aligns better
     const padH = Math.round(this.W * 0.04);
     const targetW = this.W - padH * 2;
     const sc = targetW / aw; // scale to fill width
     this.proj.scale(this.proj.scale() * sc);
-
+ 
     // Step 3: re-measure and shift so map is horizontally centered, top-aligned with small padding
     path0 = d3.geoPath(this.proj);
     const [[bx0,by0],[bx1,by1]] = path0.bounds(ccaaGeo as any);
@@ -281,7 +281,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     const [tx, ty] = this.proj.translate();
     this.proj.translate([tx + shiftX, ty + shiftY]);
     this.pathFn = d3.geoPath(this.proj);
-
+ 
     // Step 4: measure actual rendered height by checking all rendered paths
     // (pathFn.bounds on ccaaGeo misses the Canarias inset from the composite projection)
     // We do this AFTER drawing, so we temporarily draw to measure then set viewBox
@@ -313,18 +313,18 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       }
       this.H = Math.max(this.H, 200);
     }
-
+ 
     svgEl.setAttribute('viewBox', `0 0 ${this.W} ${this.H}`);
     svgEl.setAttribute('width',   String(this.W));
     svgEl.setAttribute('height',  String(this.H));
-
+ 
     // ── Index CCAA features ───────────────────────────────────────────────
     (ccaaGeo as any).features.forEach((f: any, i: number) => {
       const name   = this.getCCAAName(f, i);
       const bounds = this.pathFn.bounds(f as any) as [[number,number],[number,number]];
       this.featureData.push({ ccaaName: name, bounds });
     });
-
+ 
     // ── Index province bounds ─────────────────────────────────────────────
     if (this.topoProv) {
       const provGeo = topojson.feature(this.topoProv, (this.topoProv as any).objects.provinces as GeometryCollection);
@@ -333,16 +333,16 @@ export class SpainMapComponent implements OnInit, OnDestroy {
         this.provBounds.set(code, this.pathFn.bounds(f as any) as [[number,number],[number,number]]);
       });
     }
-
+ 
     // ── Draw layers (order matters: CCAA fill → prov borders → prov labels → comp borders → CCAA labels)
     this.drawCCAALayer(ccaaGeo);
     this.drawProvLayers(this.isZoomed); // visible immediately if already zoomed
     this.drawCompositionBorders();
     this.drawCCAALabels(ccaaGeo);
-
+ 
     this.isLoading = false;
   }
-
+ 
   // ── CCAA fill + click ─────────────────────────────────────────────────────
   private drawCCAALayer(ccaaGeo: any): void {
     const wrapper = this.wrapperRef.nativeElement;
@@ -376,7 +376,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
         if (!entry || entry.ccaaName.startsWith('Unknown')) return;
         const ccaa  = this.state.comunidades().find(c => c.id !== '00' && c.name === entry.ccaaName);
         if (!ccaa) return;
-
+ 
         // For Canarias: union of both province bounds
         let bounds = entry.bounds;
         if (this.norm(entry.ccaaName).includes('canaria')) {
@@ -386,7 +386,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
             [Math.max(b35[1][0],b38[1][0]), Math.max(b35[1][1],b38[1][1])],
           ];
         }
-
+ 
         this.zone.run(() => {
           this.tooltip  = { ...this.tooltip, visible: false };
           this.isZoomed = true;
@@ -394,12 +394,23 @@ export class SpainMapComponent implements OnInit, OnDestroy {
           this.state.selectMunicipio(ccaa.municipios[0]);
           this.redrawFills();
           this.zoomToBounds(bounds);
-          // Fade in province layers
-          this.svg.selectAll('g.prov-layer, g.prov-labels, g.prov-icons').transition().duration(400).attr('opacity', 1);
+          
+          // ✅ FIX: Wait for zoom animation to complete (600ms) + buffer (100ms)
+          // Then fade in province layers and force icon recalculation
+          setTimeout(() => {
+            this.svg.selectAll('g.prov-layer, g.prov-labels, g.prov-icons')
+              .transition().duration(400).attr('opacity', 1);
+            
+            // Force icon position recalculation after zoom settles
+            const pw = this.state.provWeather();
+            if (Object.keys(pw).length > 0) {
+              this.updateProvIconsAfterZoom(pw);
+            }
+          }, 700);
         });
       });
   }
-
+ 
   // ── Province borders + labels ──────────────────────────────────────────────
   private drawProvLayers(showNow = false): void {
     if (!this.topoProv) return;
@@ -407,7 +418,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     const features  = (provGeo as any).features;
     const wrapper   = this.wrapperRef.nativeElement;
     const provLabelFs = Math.max(5, Math.round(this.W / 170));
-
+ 
     // CAs where the province name = the CCAA name → suppress to avoid duplicate text
     // Rule: if PROV_NAME[code] normalised == shortLabel(ccaaName) normalised → hide
     const SUPPRESS_PROV_LABEL = new Set([
@@ -421,11 +432,11 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       '51', // Ceuta
       '52', // Melilla
     ]);
-
+ 
     // Province borders: always visible (subtle, helps orientation)
     // Province labels: only shown when zoomed into a CA
     const labelOpacity   = showNow ? 1 : 0;
-
+ 
     // ── Province border paths (always visible) ───────────────────────────
     this.svg.append('g').attr('class','prov-layer').attr('opacity', 1)
       .selectAll<SVGPathElement, any>('path.prov')
@@ -468,7 +479,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
           if (bounds) this.zoomToBounds(bounds);
         });
       });
-
+ 
     // ── Province name labels (shown when zoomed) ─────────────────────────
     this.svg.append('g').attr('class','prov-labels').attr('opacity', labelOpacity)
       .selectAll<SVGTextElement, any>('text.prov-label')
@@ -492,7 +503,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
         if (SUPPRESS_PROV_LABEL.has(code)) return '';
         return PROV_NAME[code] ?? '';
       });
-
+ 
     // ── Province weather icons (emoji) ───────────────────────────────────
     const iconFs = Math.max(9, Math.round(this.W / 85));
     this.svg.append('g').attr('class','prov-icons').attr('opacity', labelOpacity)
@@ -513,7 +524,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       .attr('pointer-events','none')
       .text(''); // populated by updateProvIcons() once data arrives
   }
-
+ 
   private drawCompositionBorders(): void {
     if (typeof this.proj.getCompositionBorders !== 'function') return;
     this.svg.append('path')
@@ -521,7 +532,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       .attr('fill','none').attr('stroke','#7ab8d9')
       .attr('stroke-width',0.8).attr('stroke-dasharray','4,3').attr('opacity',0.6);
   }
-
+ 
   private drawCCAALabels(ccaaGeo: any): void {
     const fs = this.baseFontSize;
     this.svg.append('g').attr('class','labels')
@@ -538,7 +549,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       .attr('stroke','rgba(2,80,140,0.30)').attr('stroke-width', fs*0.4)
       .text((_f:any,i:number) => this.shortLabel(this.featureData[i]?.ccaaName ?? ''));
   }
-
+ 
   // ── ViewBox zoom to region ─────────────────────────────────────────────────
   private zoomToBounds(b: [[number,number],[number,number]]): void {
     const [[x0,y0],[x1,y1]] = b;
@@ -552,7 +563,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     else            { const nh=vw/ar; vy-=(nh-vh)/2; vh=nh; }
     this.animateViewBox(vx, vy, vw, vh);
   }
-
+ 
   // ── Animate viewBox ────────────────────────────────────────────────────────
   private animateViewBox(tx:number, ty:number, tw:number, th:number): void {
     const cur = this.getVB();
@@ -564,19 +575,19 @@ export class SpainMapComponent implements OnInit, OnDestroy {
         this.applyVB(x,y,w,h);
       });
   }
-
+ 
   // ── Interaction: wheel zoom + drag pan ────────────────────────────────────
   private setupInteraction(): void {
     const el   = this.svgRef.nativeElement as any;
     const self = this;
-
+ 
     // Remove old handlers
     ['wheel','mousedown','contextmenu'].forEach(ev => {
       if (el[`__${ev}`]) el.removeEventListener(ev, el[`__${ev}`]);
     });
     if (el.__mousemove) window.removeEventListener('mousemove', el.__mousemove);
     if (el.__mouseup)   window.removeEventListener('mouseup',   el.__mouseup);
-
+ 
     // Wheel zoom (fixed: no drift)
     el.__wheel = (e: WheelEvent) => {
       e.preventDefault();
@@ -593,7 +604,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       const my    = vy + (e.clientY - rect.top)  / rect.height * vh;
       self.applyVB(mx-(mx-vx)*ratio, my-(my-vy)*ratio, fVw, fVh);
     };
-
+ 
     // Drag pan (any button)
     let dragging = false; let lx=0; let ly=0;
     el.__mousedown = (e: MouseEvent) => {
@@ -611,16 +622,16 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     };
     el.__mouseup   = () => { dragging=false; };
     el.__contextmenu = (e: Event) => e.preventDefault();
-
+ 
     el.addEventListener('wheel',       el.__wheel,       { passive:false });
     el.addEventListener('mousedown',   el.__mousedown);
     el.addEventListener('contextmenu', el.__contextmenu);
     window.addEventListener('mousemove', el.__mousemove);
     window.addEventListener('mouseup',   el.__mouseup);
   }
-
+ 
   // ── ViewBox helpers ────────────────────────────────────────────────────────
-
+ 
   /** Update province weather emoji icons from the provWeather signal */
   private updateProvIcons(pw: Record<string, string>): void {
     if (!this.svg) return;
@@ -637,12 +648,41 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       this.svg.select('g.prov-icons').attr('opacity', 1);
     }
   }
-
+ 
+  /** ✅ NEW: Force recalculation of icon positions after zoom animation completes */
+  private updateProvIconsAfterZoom(pw: Record<string, string>): void {
+    if (!this.svg || !this.topoProv) return;
+    
+    const provGeo = topojson.feature(this.topoProv, (this.topoProv as any).objects.provinces as GeometryCollection);
+    const features = (provGeo as any).features;
+    const provLabelFs = Math.max(5, Math.round(this.W / 170));
+    
+    const SUPPRESS_PROV_LABEL = new Set(['33', '39', '28', '30', '31', '26', '51', '52']);
+    
+    // Recalculate icon positions with current viewBox
+    this.svg.selectAll<SVGTextElement, any>('g.prov-icons text.prov-icon')
+      .data(features)
+      .attr('transform', (f:any) => {
+        const c = this.pathFn.centroid(f as any);
+        if (!c || !isFinite(c[0])) return 'translate(-9999,-9999)';
+        const code      = String(f.id??'').padStart(2,'0');
+        const hasLabel  = !SUPPRESS_PROV_LABEL.has(code) && !!PROV_NAME[code];
+        const yOff = hasLabel ? -(provLabelFs * 1.5) : 0;
+        return `translate(${c[0]},${c[1] + yOff})`;
+      })
+      .text((f: any) => {
+        const code      = String(f?.id ?? '').padStart(2, '0');
+        const capitalId = PROV_CODE_TO_CAPITAL[code];
+        const icon      = capitalId ? (pw[capitalId] ?? '') : '';
+        return icon ? (WEATHER_EMOJI[icon] ?? '🌡️') : '';
+      });
+  }
+ 
   private getVB(): [number,number,number,number] {
     return (this.svgRef.nativeElement.getAttribute('viewBox') ?? `0 0 ${this.W} ${this.H}`)
              .split(' ').map(Number) as [number,number,number,number];
   }
-
+ 
   private applyVB(vx:number, vy:number, vw:number, vh:number): void {
     const el = this.svgRef.nativeElement;
     el.setAttribute('viewBox', `${vx} ${vy} ${vw} ${vh}`);
@@ -661,7 +701,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     el.querySelectorAll<SVGTextElement>('g.prov-icons text')
       .forEach(t => t.setAttribute('font-size',`${ifs.toFixed(2)}`));
   }
-
+ 
   // ── Fill helpers ───────────────────────────────────────────────────────────
   private fillForIdx(i: number): string {
     return this.isSelectedByName(this.featureData[i]?.ccaaName??'') ? '#0274b8' : '#7ac4e8';
@@ -673,13 +713,13 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     if (!this.svg) return;
     this.svg.selectAll<SVGPathElement,any>('path.ccaa').attr('fill',(_f,i)=>this.fillForIdx(i));
   }
-
+ 
   private domIdx(ev: MouseEvent, cls: string): number {
     return Array.from(
       (ev.currentTarget as Element).parentElement!.querySelectorAll(`path.${cls}`)
     ).indexOf(ev.currentTarget as Element);
   }
-
+ 
   private getCCAAName(f: any, idx: number): string {
     const p = f.properties ?? {};
     const candidates = [p.NAME_1,p.name,p.NAME,p.NAMEUNIT,p.NOM_CCAA,p.Texto,p.NUTS_NAME].filter(Boolean);
@@ -703,7 +743,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
       'Comunidad Foral de Navarra','País Vasco','Región de Murcia','Ceuta','Melilla'];
     return ORDER[idx] ?? `Unknown_${idx}`;
   }
-
+ 
   private resolveCCAAName(text: string): string | null {
     const nl   = this.norm(text);
     const list = this.state.comunidades().filter(c => c.id !== '00');
@@ -711,11 +751,11 @@ export class SpainMapComponent implements OnInit, OnDestroy {
          ?? list.find(c=>nl.includes(this.norm(c.name)))
          ?? list.find(c=>this.norm(c.name).includes(nl)))?.name ?? null;
   }
-
+ 
   private norm(s: string): string {
     return s.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu,'').replace(/[^a-z\s]/g,'').trim();
   }
-
+ 
   private shortLabel(n: string): string {
     const M: Record<string,string> = {
       'Andalucía':'Andalucía','Aragón':'Aragón','Principado de Asturias':'Asturias',
@@ -728,7 +768,7 @@ export class SpainMapComponent implements OnInit, OnDestroy {
     };
     return M[n] ?? n.split(' ').slice(0,2).join(' ');
   }
-
+ 
   private setupResize(): void {
     this.resizeObserver = new ResizeObserver(() => {
       clearTimeout(this.resizeTimer);
